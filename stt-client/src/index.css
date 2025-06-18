@@ -1,3 +1,10 @@
+@font-face {
+  font-family: 'Pretendard-Regular';
+  src: url('https://fastly.jsdelivr.net/gh/Project-Noonnu/noonfonts_2107@1.1/Pretendard-Regular.woff') format('woff');
+  font-weight: 900;
+  font-style: normal;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -5,9 +12,67 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+.stt-container {
+  position: absolute;
+  z-index: 1001 !important;
+  /* background-color: rgba(255, 0, 0, 0.2); */
+  bottom: 0px;
+  right: 0px;
+  /* transform: translateX(-25%); */
+  padding: 0px;
+  margin: 0px;
+  width: 1080px;
+  height: 600px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 1;
+}
+
+.btn-recording {
+  position: absolute;
+  bottom: 20px;
+}
+
+.webcam-view {
+  position: absolute;
+  right: 0px;
+  bottom: 0px;
+  width: 1080px;
+  height: 600px;
+  opacity: 0.2;
+  /* border-radius: 8px; */
+  /* border: 1px solid #ccc; */
+  z-index: 1000 !important;
+  overflow: hidden;
+  /* 컨테이너 바깥 영역 잘림 */
+}
+
+.webcam-view video {
+  width: 100%;
+  /* 컨테이너 너비에 맞춤 */
+  height: 100%;
+  /* 컨테이너 높이에 맞춤 */
+  object-fit: cover;
+  /* 가로세로 비율 유지하면서 꽉 채우기 */
+  border-radius: inherit;
+  /* 부모의 모서리 반경 상속 */
 }
