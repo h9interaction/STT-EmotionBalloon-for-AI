@@ -255,8 +255,13 @@ async function analyzeEmotion(text, imageBase64) {
   }
 }
 
-server.listen(8081, () => {
-  console.log("WebSocket server listening on port 8081.");
+// server.listen(8081, () => {
+//   console.log("WebSocket server listening on port 8081.");
+// });
+
+const PORT = process.env.PORT || 8081;
+server.listen(PORT, () => {
+  console.log(`WebSocket server listening on port ${PORT}.`);
 });
 
 // =========================== GOOGLE CLOUD SETTINGS ================================ //
