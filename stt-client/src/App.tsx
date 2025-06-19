@@ -74,6 +74,12 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // 최종 버블 생성 시 호출될 콜백
+  const handleBubbleCreated = () => {
+    // showLiveBubble 상태/로직 제거
+    console.log("handleBubbleCreated");
+  };
+
   // 감정 분석 버튼 클릭 시 웹캠에서 즉시 캡처
   const handleTestAnalyze = () => {
     if (!currentText.trim()) {
@@ -91,7 +97,7 @@ const App: React.FC = () => {
 
   return (
     <>
-      <VisualizationCanvas analysisResult={analysisResult} />
+      <VisualizationCanvas analysisResult={analysisResult} onBubbleCreated={handleBubbleCreated} />
       <Container className="py-5">
         <h3 className="text-center mb-4">STT client app</h3>
         <div style={{ opacity: showAudioToText ? 1 : 0, transition: 'opacity 0.3s' }}>
@@ -104,6 +110,7 @@ const App: React.FC = () => {
             onStop={handleStop}
             onAudioText={handleAudioText}
             onFinalSTT={handleFinalSTT}
+            onBubbleCreated={handleBubbleCreated}
           />
           <WebcamView ref={webcamRef} />
         </div>

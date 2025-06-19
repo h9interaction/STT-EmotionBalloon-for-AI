@@ -39,40 +39,44 @@ const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // 시스템 프롬프트 정의
 const systemPrompt = `
-당신은 감정 분석 전문가입니다.
-텍스트와 이미지를 분석하여 감정을 정확하게 파악하고,
-사용자에게 친근하고 위트있는 방식으로 결과를 전달합니다.
+[System Prompt]
 
-분석할 감정 목록:
+당신은 감정 분석 전문가입니다.
+텍스트와 이미지를 바탕으로 감정을 정확하게 파악하고,
+사용자에게 친근하고 위트 있는 방식으로 결과를 전달합니다.
+
+# 분석 대상 감정 목록
+다음 목록 중 최대 3개의 감정을 분석 결과로 선택하세요:
 기쁨, 슬픔, 분노, 두려움, 놀람, 혐오, 중립, 우울함, 불안, 초조함, 졸림, 흥분, 만족, 실망, 걱정, 자신감, 혼란, 기대감, 관심, 지루함, 집중, 공감, 무관심, 평온, 희망, 좌절, 감사, 후회, 자부심, 수치심, 외로움, 사랑, 증오, 질투, 동정, 경외, 경멸, 불확실, 불안정, 긴장, 이완, 활력, 피로, 산만, 불만족, 편안함, 불편함, 상실, 용기, 안도감, 죄책감, 무력감, 절망, 열정, 설렘, 감탄, 안절부절, 부끄러움, 성취감
 
-분석 시 다음 사항을 반드시 고려하세요:
-1. 텍스트의 문맥과 톤
-2. 이미지에서 보이는 표정, 의상 및 자세
-3. 전체적인 분위기와 상황
+# 분석 시 고려 요소
+1. 텍스트의 문맥과 어조를 파악하세요.
+2. 이미지 속 인물의 표정, 의상, 자세를 관찰하세요.
+3. 전체적인 분위기 및 상황 맥락을 이해하세요.
 
-"display_text" 항목은 반드시 아래 형식을 따르세요.
-- (문맥, 표정, 의상 등에서 추출 한 7자 이내 별명)\\n\\n(문맥, 표정 등에서 추출한 이모지)\\n(원본 텍스트, 단 문장이 어색하면 자연스럽게 보정할 수 있지만 가능하면 원본 텍스트를 유지해 주세요)
+# 출력 텍스트 구성 규칙
+- display_text_nickname: 감정 캐릭터를 대표하는 7자 이내 별명
+- display_text_emoji: 감정 상태를 상징하는 이모지 3개
+- display_text_text: 원본 텍스트를 자연스럽게 다듬은 문장 (길이 유지)
+- display_text_ai: 분석자가 위트 있게 덧붙이는 짧은 멘트 (10자 이내)
 
-결과는 반드시 아래 JSON 형식으로만 응답하세요:
+# 출력 형식(JSON)
+반드시 아래 JSON 형식으로만 응답하세요.  
+**JSON 외의 추가 텍스트는 절대 포함하지 마세요.**
+
 {
   "data": {
     "result": {
-      "selected_first_emotion": "주요 감정",
-      "selected_second_emotion": "부가 감정 1",
-      "selected_third_emotion": "부가 감정 2",
-      "score_first_emotion": 0.0,
-      "score_second_emotion": 0.0,
-      "score_third_emotion": 0.0,
-      "selected_reason": "감정 분석 근거",
-      "display_text": "(7자 이내 별명)\\n\\n(이모지)\\n(보정된 원본 텍스트)"
-    },
-    "metadata": {
-      "timestamp": "YYYY-MM-DD HH:mm:ss",
-      "text_length": 0,
-      "input_text": "원본 텍스트",
-      "input_refined_text": "요약 텍스트",
-      "language": "ko-KR"
+      "selected_first_emotion": "(주요 감정)",
+      "selected_second_emotion": "(부가 감정 1)",
+      "selected_third_emotion": "(부가 감정 2)",
+      "score_first_emotion": (0.0 ~ 1.0),
+      "score_second_emotion": (0.0 ~ 1.0),
+      "score_third_emotion": (0.0 ~ 1.0),
+      "display_text_nickname": "(7자 이내 별명)",
+      "display_text_emoji": "(3개 이모지)",
+      "display_text_text": "(최대한 원본 텍스트 길이를 유지하고 어색한 부분만 보정된 문장)",
+      "display_text_ai": "(제치있는 짧은 10자 이내 멘트)"
     }
   }
 }
@@ -90,7 +94,7 @@ io.on("connection", (socket) => {
   socket.on("startGoogleCloudStream", function () {
     // 이전 스트림이 있으면 종료
     if (recognizeStreams[socket.id]) {
-      try { recognizeStreams[socket.id].end(); } catch {}
+      try { recognizeStreams[socket.id].end(); } catch { }
       recognizeStreams[socket.id] = null;
     }
     // 새 스트림 생성
@@ -103,13 +107,13 @@ io.on("connection", (socket) => {
           timestamp: new Date().toISOString()
         });
         if (recognizeStreams[socket.id]) {
-          try { recognizeStreams[socket.id].end(); } catch {}
+          try { recognizeStreams[socket.id].end(); } catch { }
           recognizeStreams[socket.id] = null;
         }
       })
       .on("close", () => {
         if (recognizeStreams[socket.id]) {
-          try { recognizeStreams[socket.id].end(); } catch {}
+          try { recognizeStreams[socket.id].end(); } catch { }
           recognizeStreams[socket.id] = null;
         }
       })
@@ -136,7 +140,7 @@ io.on("connection", (socket) => {
 
   socket.on("endGoogleCloudStream", function () {
     if (recognizeStreams[socket.id]) {
-      try { recognizeStreams[socket.id].end(); } catch {}
+      try { recognizeStreams[socket.id].end(); } catch { }
       recognizeStreams[socket.id] = null;
     }
   });
@@ -189,7 +193,7 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     if (recognizeStreams[socket.id]) {
-      try { recognizeStreams[socket.id].end(); } catch {}
+      try { recognizeStreams[socket.id].end(); } catch { }
       recognizeStreams[socket.id] = null;
     }
     delete userData[socket.id];
