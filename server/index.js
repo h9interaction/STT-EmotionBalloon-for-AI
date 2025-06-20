@@ -12,6 +12,7 @@ import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import { Buffer } from "buffer";
 
 // __dirname 대체 (ESM 환경)
 const __filename = fileURLToPath(import.meta.url);
@@ -33,14 +34,36 @@ const io = new Server(server, {
 
 // Google Cloud Speech-to-Text 설정 (Render 환경 대응)
 let speechClient;
-if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
-  // Render 환경: 환경 변수에서 JSON 문자열로 인증 정보 받기
-  const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
-  speechClient = new speech.SpeechClient({ credentials });
-} else {
-  // 로컬 환경: 파일에서 인증 정보 읽기
-  process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(__dirname, "speech-to-text-key.json");
-  speechClient = new speech.SpeechClient();
+try {
+  if (process.env.GOOGLE_CREDENTIALS_BASE64) {
+    // 1. Base64 환경 변수 사용 (가장 안정적)
+    const jsonCredentials = Buffer.from(
+      process.env.GOOGLE_CREDENTIALS_BASE64,
+      "base64"
+    ).toString("utf-8");
+    const credentials = JSON.parse(jsonCredentials);
+    speechClient = new speech.SpeechClient({ credentials });
+    console.log("Initialized SpeechClient from Base64 credentials.");
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+    // 2. JSON 문자열 환경 변수 사용 (기존 방식)
+    const credentials = JSON.parse(
+      process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+    );
+    speechClient = new speech.SpeechClient({ credentials });
+    console.log("Initialized SpeechClient from JSON string credentials.");
+  } else {
+    // 3. 로컬 파일 사용
+    const credentialsPath = path.join(__dirname, "speech-to-text-key.json");
+    if (fs.existsSync(credentialsPath)) {
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
+      speechClient = new speech.SpeechClient();
+      console.log("Initialized SpeechClient from local file.");
+    } else {
+      throw new Error("Could not find any Google Cloud credentials.");
+    }
+  }
+} catch (error) {
+  console.error("Failed to initialize Google SpeechClient:", error);
 }
 
 // Gemini API 설정

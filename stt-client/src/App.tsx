@@ -8,8 +8,9 @@ import WebcamView, { WebcamViewHandle } from "./WebcamView";
 import VisualizationCanvas from "./VisualizationCanvas";
 import io from "socket.io-client";
 import { StatusType } from './components/StatusDisplay';
+import { SERVER_CONFIG } from './constants/audioConfig';
 
-const socket = io("http://localhost:8081");
+const socket = io(SERVER_CONFIG.url);
 
 const App: React.FC = () => {
   const [status, setStatus] = useState<StatusType>('idle');

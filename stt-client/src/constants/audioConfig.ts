@@ -23,19 +23,10 @@ export const STT_CONFIG = {
   finalSTTDebounce: 1000 // 최종 STT 중복 호출 방지 (ms)
 } as const;
 
-// 서버 설정 (환경에 따라 동적 설정)
-const getServerUrl = (): string => {
-  // 개발 환경
-  if (process.env.NODE_ENV === 'development') {
-    return "http://localhost:8081";
-  }
-  
-  // 프로덕션 환경 (Render 배포 URL)
-  // TODO: 실제 배포 후 URL로 변경
-  return "https://your-render-service-url.onrender.com";
-};
-
+// 서버 설정
+// Render에 배포된 서버 사용
 export const SERVER_CONFIG = {
-  url: getServerUrl(),
+  url: "https://stt-emotion-balloon-server.onrender.com", // Render 배포 서버
+  // url: "http://localhost:8081", // 로컬 테스트용 (환경 변수 문제 해결 시)
   workletPath: "/src/worklets/recorderWorkletProcessor.js"
 } as const; 
