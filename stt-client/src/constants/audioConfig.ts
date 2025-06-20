@@ -28,5 +28,5 @@ export const STT_CONFIG = {
 export const SERVER_CONFIG = {
   url: "https://stt-emotion-balloon-server.onrender.com", // Render 배포 서버
   // url: "http://localhost:8081", // 로컬 테스트용 (환경 변수 문제 해결 시)
-  workletPath: "/src/worklets/recorderWorkletProcessor.js"
+  workletPath: process.env.PUBLIC_URL + "/src/worklets/recorderWorkletProcessor.js"
 } as const; 
