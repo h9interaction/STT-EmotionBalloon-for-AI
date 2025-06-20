@@ -2,10 +2,17 @@
 import { default as React, useEffect, useState, useRef } from "react";
 import { Button } from "react-bootstrap";
 import Container from "react-bootstrap/Container";
-import StatusDisplay, { StatusType } from './components/StatusDisplay';
-import { AudioStreamManager } from './services/AudioStreamManager';
-import { SocketManager } from './services/SocketManager';
+import StatusDisplay, { StatusType, LiveBubbleItem } from './components/StatusDisplay';
+import { AudioStreamManager, AudioStreamCallbacks } from './services/AudioStreamManager';
+import { SocketManager, SocketCallbacks } from './services/SocketManager';
 import { useRestartManager } from './hooks/useRestartManager';
+import { nanoid } from 'nanoid';
+
+// 필요한 타입들을 정의합니다.
+interface RecognitionResult {
+  stt: string;
+  analysis: any;
+}
 
 interface AudioToTextProps {
   isRecording: boolean;
@@ -17,164 +24,167 @@ interface AudioToTextProps {
   onAudioText: (text: string) => void;
   onFinalSTT: (text: string) => void;
   onBubbleCreated?: () => void;
+  onConnectionSuccess?: () => void;
 }
 
 const AudioToText: React.FC<AudioToTextProps> = ({
   isRecording, status, currentText, analysisResult,
-  onStart, onStop, onAudioText, onFinalSTT, onBubbleCreated
+  onStart, onStop, onAudioText, onFinalSTT, onBubbleCreated, onConnectionSuccess
 }) => {
   const [recognitionHistory, setRecognitionHistory] = useState<string[]>([]);
   const [currentRecognition, setCurrentRecognition] = useState<string>();
-  const [showLiveBubble, setShowLiveBubble] = useState(false);
-  
+
+  const [liveBubbles, setLiveBubbles] = useState<LiveBubbleItem[]>([]);
+  const prevStatusRef = useRef<StatusType>();
+
   const audioStreamManagerRef = useRef<AudioStreamManager | null>(null);
   const socketManagerRef = useRef<SocketManager | null>(null);
 
-  // 재시작 관리 훅
   const restartManager = useRestartManager({
-    onRestart: () => {
-      connect();
-    },
+    onRestart: () => connect(),
     onMaxAttemptsReached: () => {
       alert("음성 인식 연결에 문제가 발생했습니다. 수동으로 재시작해주세요.");
       disconnect();
     }
   });
 
-  // 오디오 스트림 콜백
-  const audioStreamCallbacks = {
-    onAudioData: (chunk: Uint8Array) => {
-      if (socketManagerRef.current) {
-        socketManagerRef.current.sendAudioData(chunk);
+  useEffect(() => {
+    if (prevStatusRef.current !== 'processing' && status === 'processing') {
+      const newBubble = { id: nanoid(), text: '...' };
+      setLiveBubbles(prev => [...prev, newBubble]);
+    } else if (status === 'processing' && liveBubbles.length > 0) {
+      setLiveBubbles(prev => {
+        const updatedBubbles = [...prev];
+        const lastBubble = updatedBubbles[updatedBubbles.length - 1];
+        if (lastBubble && lastBubble.text !== currentText) {
+          updatedBubbles[updatedBubbles.length - 1] = { ...lastBubble, text: currentText };
+          return updatedBubbles;
+        }
+        return prev;
+      });
+    }
+
+    prevStatusRef.current = status;
+  }, [status, currentText]);
+
+  useEffect(() => {
+    if (analysisResult) {
+      setLiveBubbles([]);
+    }
+  }, [analysisResult]);
+
+  // isRecording이 true로 변경될 때 연결 시작
+  useEffect(() => {
+    if (isRecording) {
+      connect();
+    }
+  }, [isRecording]);
+
+  const connect = () => {
+    const socketCallbacks: SocketCallbacks = {
+      onConnect: () => {
+        console.log("Socket connected.");
+        if (onConnectionSuccess) {
+          onConnectionSuccess();
+        }
+      },
+      onDisconnect: () => {
+        console.log("Socket disconnected.");
+        onStop();
+      },
+      onAudioText: (text: string) => onAudioText(text),
+      onFinalSTT: (text: string) => {
+        if (text.trim()) {
+          setRecognitionHistory((old) => [text, ...old]);
+          onFinalSTT(text);
+        }
+      },
+      onStreamError: (error: string) => {
+        restartManager.handleStreamError(error);
+      },
+      onConnectionError: (error: Error) => {
+        restartManager.handleConnectionError();
       }
-    },
-    onError: (error: Error) => {
-      console.error("Audio stream error:", error);
-      disconnect();
-    }
-  };
+    };
 
-  // 소켓 콜백
-  const socketCallbacks = {
-    onConnect: () => {
-      console.log("Socket connected");
-    },
-    onDisconnect: () => {
-      console.log("Socket disconnected");
-      onStop();
-    },
-    onAudioText: (text: string) => {
-      setCurrentRecognition(text);
-      onAudioText(text);
-    },
-    onFinalSTT: (text: string) => {
-      if (text.trim()) {
-        setRecognitionHistory((old) => [text, ...old]);
-        onFinalSTT(text);
-        // onAudioText('');
+    const socket = new SocketManager(socketCallbacks);
+    socket.connect();
+    socketManagerRef.current = socket;
+
+    const audioCallbacks: AudioStreamCallbacks = {
+      onAudioData: (chunk: Uint8Array) => {
+        if (socketManagerRef.current?.isConnected()) {
+          socketManagerRef.current.sendAudioData(chunk);
+        }
+      },
+      onError: (error) => {
+        console.error("Audio stream error:", error);
+        restartManager.handleStreamError(error.message);
       }
-    },
-    onStreamError: (error: string) => {
-      restartManager.handleStreamError(error);
-    },
-    onConnectionError: (error: Error) => {
-      restartManager.handleConnectionError();
-    },
-    onBubbleCreated: () => {
-      setShowLiveBubble(false);
-      onAudioText('');
-      console.log("onBubbleCreated");
-      // if (onBubbleCreated) onBubbleCreated();
-    }
+    };
+
+    const audioStreamManager = new AudioStreamManager(audioCallbacks);
+    audioStreamManager.startStream();
+    audioStreamManagerRef.current = audioStreamManager;
+
+    onStart();
+    restartManager.resetErrorState();
   };
 
-  // 연결 함수
-  const connect = async () => {
-    try {
-      // 소켓 매니저 초기화 및 연결
-      socketManagerRef.current = new SocketManager(socketCallbacks);
-      socketManagerRef.current.connect();
-
-      // 오디오 스트림 매니저 초기화
-      audioStreamManagerRef.current = new AudioStreamManager(audioStreamCallbacks);
-      await audioStreamManagerRef.current.startStream();
-
-      onStart();
-      restartManager.resetErrorState();
-
-    } catch (error) {
-      console.error("Error connecting:", error);
-      disconnect();
-    }
-  };
-
-  // 연결 해제 함수
   const disconnect = () => {
     try {
-      audioStreamManagerRef.current?.stopStream();
-      socketManagerRef.current?.disconnect();
-      
-      audioStreamManagerRef.current = null;
-      socketManagerRef.current = null;
-
+      if (audioStreamManagerRef.current) {
+        audioStreamManagerRef.current.stopStream();
+        audioStreamManagerRef.current = null;
+      }
+      if (socketManagerRef.current) {
+        socketManagerRef.current.disconnect();
+        socketManagerRef.current = null;
+      }
       onStop();
-      onAudioText(''); // 실시간 텍스트 초기화
       restartManager.resetErrorState();
-
     } catch (error) {
-      console.error("Error disconnecting:", error);
+      console.error("Error during disconnect:", error);
     }
   };
 
-  // 컴포넌트 언마운트 시 정리
+  const startRecording = () => {
+    // connect(); // 이 줄을 제거 - handleStart에서 이미 isRecording을 true로 설정함
+  };
+
+  const stopRecording = () => {
+    disconnect();
+  };
+
   useEffect(() => {
     return () => {
       disconnect();
     };
   }, []);
 
-  // 현재 텍스트가 변경될 때 소켓 매니저에 전달
-  useEffect(() => {
-    if (socketManagerRef.current) {
-      socketManagerRef.current.setPrevText(currentText);
-    }
-  }, [currentText]);
-
-  // 인식 히스토리 로깅
-  useEffect(() => {
-    console.log("\n\nrecognitionHistory", recognitionHistory);
-  }, [recognitionHistory]);
-
-  // status가 processing으로 바뀔 때 최초 1회만 showLiveBubble true
-  useEffect(() => {
-    if (status === 'processing') setShowLiveBubble(true);
-  }, [status]);
-
-  // analysisResult가 바뀌는 순간(최종 버블 생성 타이밍)에 실시간 버블 숨김
-  useEffect(() => {
-    if (analysisResult) {
-      setShowLiveBubble(false);
-    }
-  }, [analysisResult]);
+  const handleRestart = () => {
+    disconnect();
+    setTimeout(() => {
+      connect();
+    }, 100);
+  };
 
   return (
-    <Container className="stt-container">
+    <Container fluid className="p-0">
       <StatusDisplay
         status={status}
-        currentText={currentText}
-        analysisResult={analysisResult}
-        showLiveBubble={showLiveBubble}
+        liveBubbles={liveBubbles}
       />
-      {/* 녹음 중이 아닐 때만 Start 버튼 보이기 */}
       {!isRecording && (
-        <Button
-          className="btn-outline-light btn-recording"
-          onClick={connect}
-        >
-          Start
-        </Button>
+        <div className="btn-recording-container">
+          <Button
+            className="btn-outline-light btn-recording"
+            onClick={connect}
+          >
+            Start
+          </Button>
+        </div>
       )}
-      {/* 녹음 중일 때는 버튼 숨김 (Stop 버튼 미노출) */}
     </Container>
   );
 };

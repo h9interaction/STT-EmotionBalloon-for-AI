@@ -24,7 +24,8 @@ const App: React.FC = () => {
 
   const handleStart = () => {
     setIsRecording(true);
-    setStatus('ready');
+    // 서버 연결 전까지는 idle 상태 유지
+    // setStatus('ready'); // 이 줄을 제거
   };
 
   const handleStop = () => {
@@ -35,7 +36,11 @@ const App: React.FC = () => {
 
   const handleAudioText = (text: string) => {
     setCurrentText(text);
-    setStatus(text ? 'processing' : 'ready');
+    // 텍스트가 있을 때만 processing 상태로, 없을 때는 현재 상태 유지
+    if (text) {
+      setStatus('processing');
+    }
+    // 텍스트가 없을 때는 상태를 변경하지 않음 (서버 연결 전까지는 idle 유지)
   };
 
   const handleFinalSTT = (text: string) => {
@@ -96,11 +101,16 @@ const App: React.FC = () => {
     setSttText(currentText);
   };
 
+  // 서버 연결 성공 시 호출될 콜백 추가
+  const handleConnectionSuccess = () => {
+    setStatus('ready');
+  };
+
   return (
     <>
       <VisualizationCanvas analysisResult={analysisResult} onBubbleCreated={handleBubbleCreated} />
       <Container className="py-5">
-        <h3 className="text-center mb-4">STT client app</h3>
+        {/* <h3 className="text-center mb-4">STT client app</h3> */}
         <div style={{ opacity: showAudioToText ? 1 : 0, transition: 'opacity 0.3s' }}>
           <AudioToText
             isRecording={isRecording}
@@ -112,10 +122,11 @@ const App: React.FC = () => {
             onAudioText={handleAudioText}
             onFinalSTT={handleFinalSTT}
             onBubbleCreated={handleBubbleCreated}
+            onConnectionSuccess={handleConnectionSuccess}
           />
           <WebcamView ref={webcamRef} />
         </div>
-        <Card className="mt-5">
+        <Card className="mt-5 stt-container-old">
           <Card.Header as="h5">감정 분석 테스트</Card.Header>
           <Card.Body>
             <Form>

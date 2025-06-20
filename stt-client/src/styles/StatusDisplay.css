@@ -1,20 +1,81 @@
 .status-display {
+  position: fixed;
+  bottom: 50px;
+  width: calc(100% / 4);
+  /* left: 0; */
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
   text-align: center;
-  margin: 20px 0;
-  padding: 10px;
-  z-index: 1002 !important;
+}
+
+.live-bubble-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.live-bubble-wrapper {
+  margin-bottom: 20px;
+}
+
+/* 말풍선 사라지는 애니메이션 */
+.fade-out {
+  transition: all 0.3s ease-out !important;
+  opacity: 0 !important;
+  transform: scale(0) !important;
+  pointer-events: none !important;
 }
 
 .status-text {
-  font-size: 1.2rem;
-  color: #ffffff;
-  font-weight: 500;
-  padding: 10px;
-  border-radius: 5px;
-  /* background-color: rgba(255, 255, 255, 0.1); */
+  margin-top: 32px;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: bold;
+  pointer-events: auto;
+  transition: visibility 0.2s;
+}
+
+/* Loading Animation Styles */
+.bubble-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bubble-loader span {
   display: inline-block;
-  min-width: 200px;
-  text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  margin: 0 5px;
+  animation: bubble-pulse 1.4s infinite ease-in-out;
+}
+
+.bubble-loader span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.bubble-loader span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes bubble-pulse {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1.0);
+  }
 }
 
 .current-text {

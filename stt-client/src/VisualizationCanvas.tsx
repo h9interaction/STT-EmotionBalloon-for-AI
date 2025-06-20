@@ -78,7 +78,7 @@ const VisualizationCanvas: React.FC<VisualizationCanvasProps> = ({
     if (!ctx) return;
 
     const renderer = new SpeechBubbleRenderer(ctx);
-    
+
     // 말풍선 그리기
     bubbles.forEach(bubble => {
       renderer.drawSpeechBubble(
@@ -90,7 +90,7 @@ const VisualizationCanvas: React.FC<VisualizationCanvasProps> = ({
         bubble.radius, 
         bubble.scale
       );
-    });
+      });
   }, [bubbles, fontReady, canvasRef]);
 
   // 말풍선 위치 애니메이션
@@ -134,8 +134,8 @@ const VisualizationCanvas: React.FC<VisualizationCanvasProps> = ({
         try {
           // 새로운 버블 생성
           const newBubble = BubbleFactory.createBubble(analysisResult, width, height);
-          const next = [...prev, newBubble];
-          const bubbleIdx = next.length - 1;
+        const next = [...prev, newBubble];
+        const bubbleIdx = next.length - 1;
           
           // scale 애니메이션 시작
           BubbleFactory.startScaleAnimation(newBubble, bubbleIdx, setBubbles);

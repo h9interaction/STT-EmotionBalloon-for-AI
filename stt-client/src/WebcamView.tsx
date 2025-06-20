@@ -34,7 +34,7 @@ const WebcamView = forwardRef<WebcamViewHandle, WebcamViewProps>((props, ref) =>
                 </div>
             </div>
         );
-    }
+            }
 
     return (
         <div className="webcam-view">
