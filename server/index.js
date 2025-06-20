@@ -11,6 +11,7 @@ import http from "http";
 import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
 // __dirname 대체 (ESM 환경)
 const __filename = fileURLToPath(import.meta.url);
@@ -30,9 +31,17 @@ const io = new Server(server, {
   },
 });
 
-// Google Cloud Speech-to-Text 설정
-process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(__dirname, "speech-to-text-key.json");
-const speechClient = new speech.SpeechClient();
+// Google Cloud Speech-to-Text 설정 (Render 환경 대응)
+let speechClient;
+if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+  // Render 환경: 환경 변수에서 JSON 문자열로 인증 정보 받기
+  const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+  speechClient = new speech.SpeechClient({ credentials });
+} else {
+  // 로컬 환경: 파일에서 인증 정보 읽기
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(__dirname, "speech-to-text-key.json");
+  speechClient = new speech.SpeechClient();
+}
 
 // Gemini API 설정
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -255,8 +264,21 @@ async function analyzeEmotion(text, imageBase64) {
   }
 }
 
-server.listen(8081, () => {
-  console.log("WebSocket server listening on port 8081.");
+server.listen(process.env.PORT || 8081, () => {
+  console.log(`WebSocket server listening on port ${process.env.PORT || 8081}.`);
+});
+
+// 헬스체크 엔드포인트 (Render에서 필요)
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// 루트 엔드포인트
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'STT Emotion Balloon Server is running!',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // =========================== GOOGLE CLOUD SETTINGS ================================ //
