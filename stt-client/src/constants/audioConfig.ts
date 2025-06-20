@@ -23,8 +23,19 @@ export const STT_CONFIG = {
   finalSTTDebounce: 1000 // 최종 STT 중복 호출 방지 (ms)
 } as const;
 
-// 서버 설정
+// 서버 설정 (환경에 따라 동적 설정)
+const getServerUrl = (): string => {
+  // 개발 환경
+  if (process.env.NODE_ENV === 'development') {
+    return "http://localhost:8081";
+  }
+  
+  // 프로덕션 환경 (Render 배포 URL)
+  // TODO: 실제 배포 후 URL로 변경
+  return "https://your-render-service-url.onrender.com";
+};
+
 export const SERVER_CONFIG = {
-  url: "http://localhost:8081",
+  url: getServerUrl(),
   workletPath: "/src/worklets/recorderWorkletProcessor.js"
 } as const; 
