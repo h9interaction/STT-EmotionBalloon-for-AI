@@ -9,6 +9,8 @@ import VisualizationCanvas from "./VisualizationCanvas";
 import io from "socket.io-client";
 import { StatusType } from './components/StatusDisplay';
 import { SERVER_CONFIG } from './constants/audioConfig';
+import { Socket } from 'socket.io-client';
+import { LiveAPIClient } from "./services/LiveAPIClient";
 
 const socket = io(SERVER_CONFIG.url);
 
@@ -21,6 +23,7 @@ const App: React.FC = () => {
   const [sttText, setSttText] = useState<string | null>(null);
   const webcamRef = useRef<WebcamViewHandle>(null);
   const [showAudioToText, setShowAudioToText] = useState(true);
+  const liveApiClientRef = useRef<LiveAPIClient | null>(null);
 
   const handleStart = () => {
     setIsRecording(true);
@@ -59,6 +62,7 @@ const App: React.FC = () => {
   // 소켓 이벤트 리스너 설정
   useEffect(() => {
     socket.on("emotion_analysis_result", (result) => {
+      console.log("감정 분석 결과 수신:", result);
       setStatus('ready');
       setAnalysisResult(result);
       setCapturedImage(null);
@@ -71,14 +75,24 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.code === 'Backspace') {
-        setShowAudioToText(prev => !prev);
-      }
+    liveApiClientRef.current = new LiveAPIClient((result) => {
+      setAnalysisResult(result);
+    });
+    liveApiClientRef.current.connect();
+    return () => {
+      liveApiClientRef.current?.disconnect();
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // useEffect(() => {
+  //   const handleKeyDown = (event: KeyboardEvent) => {
+  //     if (event.code === 'Backspace') {
+  //       setShowAudioToText(prev => !prev);
+  //     }
+  //   };
+  //   window.addEventListener('keydown', handleKeyDown);
+  //   return () => window.removeEventListener('keydown', handleKeyDown);
+  // }, []);
 
   // 최종 버블 생성 시 호출될 콜백
   const handleBubbleCreated = () => {
@@ -106,25 +120,41 @@ const App: React.FC = () => {
     setStatus('ready');
   };
 
+  const handleStatusChange = (newStatus: StatusType) => {
+    setStatus(newStatus);
+  };
+
+  // 테스트용 실시간 분석 요청 함수
+  const handleAnalyze = (text: string) => {
+    liveApiClientRef.current?.send({
+      contents: [
+        { parts: [{ text }] }
+      ]
+    });
+  };
+
   return (
     <>
       <VisualizationCanvas analysisResult={analysisResult} onBubbleCreated={handleBubbleCreated} />
       <Container className="py-5">
         {/* <h3 className="text-center mb-4">STT client app</h3> */}
         <div style={{ opacity: showAudioToText ? 1 : 0, transition: 'opacity 0.3s' }}>
+          <WebcamView ref={webcamRef} />
           <AudioToText
             isRecording={isRecording}
             status={status}
             currentText={currentText}
             analysisResult={analysisResult}
+            webcamRef={webcamRef}
+            socket={socket}
             onStart={handleStart}
             onStop={handleStop}
             onAudioText={handleAudioText}
             onFinalSTT={handleFinalSTT}
             onBubbleCreated={handleBubbleCreated}
             onConnectionSuccess={handleConnectionSuccess}
+            onStatusChange={handleStatusChange}
           />
-          <WebcamView ref={webcamRef} />
         </div>
         <Card className="mt-5 stt-container-old">
           <Card.Header as="h5">감정 분석 테스트</Card.Header>
@@ -168,6 +198,10 @@ const App: React.FC = () => {
           </Card.Body>
         </Card>
       </Container>
+      <button onClick={() => handleAnalyze("안녕하세요, 실시간 테스트입니다.")}
+        style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}>
+        실시간 분석 테스트
+      </button>
     </>
   );
 }

@@ -39,6 +39,7 @@ export class SocketManager {
       this.disconnect();
     }
 
+    console.log(`Connecting to STT server: ${SERVER_CONFIG.url}`);
     this.socket = io.connect(SERVER_CONFIG.url);
     this.setupEventListeners();
   }
@@ -222,5 +223,12 @@ export class SocketManager {
    */
   isConnected(): boolean {
     return this.socket?.connected ?? false;
+  }
+
+  /**
+   * 소켓 인스턴스를 반환합니다.
+   */
+  getSocket(): io.Socket | null {
+    return this.socket;
   }
 } 

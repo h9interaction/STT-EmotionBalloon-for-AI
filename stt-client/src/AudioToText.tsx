@@ -7,6 +7,8 @@ import { AudioStreamManager, AudioStreamCallbacks } from './services/AudioStream
 import { SocketManager, SocketCallbacks } from './services/SocketManager';
 import { useRestartManager } from './hooks/useRestartManager';
 import { nanoid } from 'nanoid';
+import { WebcamViewHandle } from './WebcamView';
+import { Socket } from 'socket.io-client';
 
 // 필요한 타입들을 정의합니다.
 interface RecognitionResult {
@@ -19,17 +21,20 @@ interface AudioToTextProps {
   status: StatusType;
   currentText: string;
   analysisResult?: any;
+  webcamRef?: React.RefObject<WebcamViewHandle>;
+  socket?: Socket;
   onStart: () => void;
   onStop: () => void;
   onAudioText: (text: string) => void;
   onFinalSTT: (text: string) => void;
   onBubbleCreated?: () => void;
   onConnectionSuccess?: () => void;
+  onStatusChange?: (status: StatusType) => void;
 }
 
 const AudioToText: React.FC<AudioToTextProps> = ({
-  isRecording, status, currentText, analysisResult,
-  onStart, onStop, onAudioText, onFinalSTT, onBubbleCreated, onConnectionSuccess
+  isRecording, status, currentText, analysisResult, webcamRef, socket,
+  onStart, onStop, onAudioText, onFinalSTT, onBubbleCreated, onConnectionSuccess, onStatusChange
 }) => {
   const [recognitionHistory, setRecognitionHistory] = useState<string[]>([]);
   const [currentRecognition, setCurrentRecognition] = useState<string>();
@@ -169,12 +174,26 @@ const AudioToText: React.FC<AudioToTextProps> = ({
     }, 100);
   };
 
+  const handleStatusChange = (newStatus: StatusType) => {
+    if (onStatusChange) {
+      onStatusChange(newStatus);
+    }
+  };
+
+  // 입력 텍스트 처리 함수
+  const handleInputText = (text: string) => {
+    // 입력 텍스트로 바로 LiveBubble 생성
+    const newBubble = { id: nanoid(), text: text };
+    setLiveBubbles(prev => [...prev, newBubble]);
+  };
+
+  // SocketManager에서 소켓 인스턴스를 가져오는 함수
+  const getSocket = (): Socket | undefined => {
+    return socketManagerRef.current?.getSocket() || undefined;
+  };
+
   return (
     <Container fluid className="p-0">
-      <StatusDisplay
-        status={status}
-        liveBubbles={liveBubbles}
-      />
       {!isRecording && (
         <div className="btn-recording-container">
           <Button
@@ -185,6 +204,14 @@ const AudioToText: React.FC<AudioToTextProps> = ({
           </Button>
         </div>
       )}
+      <StatusDisplay
+        status={status}
+        liveBubbles={liveBubbles}
+        webcamRef={webcamRef}
+        onStatusChange={handleStatusChange}
+        onInputText={handleInputText}
+        socket={socket || getSocket()}
+      />
     </Container>
   );
 };

@@ -74,7 +74,7 @@ code {
 
 .btn-recording-container {
   position: fixed;
-  bottom: 0px;
+  bottom: 84px;
   width: calc(100% / 4);
   right: 0px;
   text-align: center;
@@ -84,8 +84,11 @@ code {
 
 .btn-recording {
   position: absolute;
-  border-radius: 20px;
-  background-color: rgb(112, 112, 112);
+  border-radius: 150px;
+  background-color: rgb(45, 45, 45);
+  border: 1px solid rgb(0, 0, 0);
+  width: 100px;
+  height: 100px;
   bottom: 120px;
   left: 50%;
   transform: translateX(-50%);

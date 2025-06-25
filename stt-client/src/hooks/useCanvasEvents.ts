@@ -37,19 +37,19 @@ export function useCanvasEvents(
       handlers.onResize(canvas, ctx);
     };
 
-    // 스페이스바 키 이벤트 핸들러
-    const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.code === 'Space' || event.key === ' ' || event.key === 'Spacebar') {
-        handlers.onKeyPress?.(event);
-      }
-    };
+    // "/" 키 이벤트 핸들러
+    // const handleKeyPress = (event: KeyboardEvent) => {
+    //   if (event.code === 'Slash' || event.key === '/') {
+    //     handlers.onKeyPress?.(event);
+    //   }
+    // };
 
     window.addEventListener('resize', handleResize);
-    window.addEventListener('keydown', handleKeyPress);
+    // window.addEventListener('keydown', handleKeyPress);
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('keydown', handleKeyPress);
+      // window.removeEventListener('keydown', handleKeyPress);
     };
   }, [width, height, backgroundColor, handlers]);
 

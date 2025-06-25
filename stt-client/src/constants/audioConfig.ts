@@ -26,7 +26,10 @@ export const STT_CONFIG = {
 // 서버 설정
 // Render에 배포된 서버 사용
 export const SERVER_CONFIG = {
-  url: "https://stt-emotion-balloon-server.onrender.com", // Render 배포 서버
-  // url: "http://localhost:8081", // 로컬 테스트용 (환경 변수 문제 해결 시)
+  // url: "https://stt-emotion-balloon-server.onrender.com", // Render 배포 서버
+  url: "http://localhost:8082", // 로컬 테스트용 (환경 변수 문제 해결 시)
   workletPath: process.env.PUBLIC_URL + "/src/worklets/recorderWorkletProcessor.js"
-} as const; 
+} as const;
+
+// stt-client에서 서버 URL 변경
+const SERVER_URL = 'http://localhost:8082';  // Whisper 서버 
