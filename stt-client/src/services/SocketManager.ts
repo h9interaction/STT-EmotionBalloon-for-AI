@@ -26,6 +26,7 @@ export class SocketManager {
   private currentSTT: string = '';
   private prevSTT: string | null = null;
   private prevText: string = '';
+  private additionalTimers: Set<NodeJS.Timeout> = new Set();
 
   constructor(callbacks: SocketCallbacks) {
     this.callbacks = callbacks;
@@ -153,7 +154,8 @@ export class SocketManager {
 
     this.socket.emit("endGoogleCloudStream");
     
-    setTimeout(() => {
+    const restartTimeout = setTimeout(() => {
+      this.additionalTimers.delete(restartTimeout);
       if (this.socket) {
         this.socket.emit("startGoogleCloudStream");
         this.sttTimer = setTimeout(() => {
@@ -161,6 +163,7 @@ export class SocketManager {
         }, STT_CONFIG.sessionLimit);
       }
     }, 500);
+    this.additionalTimers.add(restartTimeout);
   }
 
   /**
@@ -193,6 +196,7 @@ export class SocketManager {
       this.socket = null;
     }
 
+    // 모든 타이머 정리
     if (this.sttTimer) {
       clearTimeout(this.sttTimer);
       this.sttTimer = null;
@@ -202,6 +206,12 @@ export class SocketManager {
       clearTimeout(this.speakingTimeout);
       this.speakingTimeout = null;
     }
+
+    // 추가 타이머들 정리
+    this.additionalTimers.forEach(timer => {
+      clearTimeout(timer);
+    });
+    this.additionalTimers.clear();
 
     this.resetState();
     this.callbacks.onDisconnect();
